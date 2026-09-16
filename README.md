@@ -1,39 +1,47 @@
-# BancoDeDados GUI
+# BancoDeDadosGUI v2
 
-Este projeto é uma interface gráfica de usuário (GUI) construída com `ttkbootstrap` e `tkinter` para interagir com um banco de dados MySQL. A aplicação permite ao usuário se conectar a um banco de dados e executar operações SQL básicas, incluindo `INSERT`, `DELETE`, `UPDATE` e `SELECT`.
+Cliente didático MySQL com interface Tkinter, consultas parametrizadas e lista explícita
+de tabelas/colunas permitidas. A v2 substitui a entrada livre de SQL por operações
+estruturadas; a implementação antiga permanece no histórico Git.
 
-## Funcionalidades
+## Preparação
 
-- **Conexão com o Banco de Dados**: Insira as credenciais do banco de dados (host, usuário, senha e nome do banco) para estabelecer uma conexão.
-- **Seleção de Operações SQL**: Escolha entre as operações `INSERT`, `DELETE`, `UPDATE` e `SELECT`.
-- **Execução de Operações**: Execute as operações SQL fornecendo os parâmetros necessários para cada operação.
-- **Exibição de Resultados**: Veja os resultados das consultas `SELECT` em uma nova janela com uma visão em tabela.
+Python 3.11+ com Tkinter e `pip install -r requirements.txt`. Configure variáveis do
+ambiente conforme `.env.example` (não há carregamento automático de .env).
+Use usuário MySQL com privilégios mínimos em um banco de demonstração.
 
-## Tecnologias Utilizadas
+`DB_SCHEMA_JSON` é um objeto de tabelas e colunas autorizadas, por exemplo
+`{"clients":["id","name"]}`. Não cria tabelas. O esquema já deve existir no banco.
+Para teste local, crie `clients(id INT PRIMARY KEY, name VARCHAR(255))` em um banco vazio.
+Conexões remotas exigem `DB_SSL_CA` com CA confiável, verificando certificado e hostname.
+Escrita exige `DB_ALLOW_WRITE=1`; por padrão a interface é somente leitura.
 
-- **Python**: Linguagem de programação principal.
-- **tkinter**: Biblioteca padrão do Python para interfaces gráficas.
-- **ttkbootstrap**: Biblioteca para temas modernos do `tkinter`.
-- **mysql-connector-python**: Biblioteca para conectar ao MySQL e executar consultas SQL.
+```sh
+python BancoDeDados.py
+python -m unittest discover -s tests -v
+```
 
-## Como Usar
+## Uso
 
-1. **Clone o Repositório**:
-    ```sh
-    git clone https://github.com/seu-usuario/bancodedados-gui.git
-    cd bancodedados-gui
-    ```
+Selecione tabela e operação. Informe valores JSON como `{"id":1,"name":"Cliente Sintético"}`
+e filtros por igualdade como `{"id":1}`. UPDATE/DELETE sem filtros são rejeitados.
+JSON não aceita expressões SQL, joins ou operadores arbitrários. Uma condição pode
+atingir várias linhas: confira o filtro; a interface pede confirmação antes da escrita.
+SELECT limita a 100 registros na UI (máximo 500 na API), com resultados vazios tratados.
 
-2. **Instale as Dependências**:
-    ```sh
-    pip install ttkbootstrap mysql-connector-python
-    ```
+## Arquitetura e segurança
 
-3. **Execute a Aplicação**:
-    ```sh
-    python app.py
-    ```
+`config.py` valida ambiente/TLS; `repository.py` valida identificadores contra allowlist,
+passa valores separados via placeholders `%s`, fecha cursores e faz rollback em falhas;
+`ui.py` apresenta dados e mensagens genéricas sem registrar credenciais/erros SQL.
+Allowlist não substitui grants do banco. Não há suporte a bancos de terceiros sem autorização.
 
-4. **Conecte-se ao Banco de Dados**: Insira o host, usuário, senha e nome do banco de dados na GUI e clique em "Conectar".
+## Testes e limites
 
-5. **Selecione e Execute Operações SQL**: Escolha a operação desejada e insira os parâmetros necessários. Clique em "Executar" para ver os resultados.
+Suíte offline executa CRUD em SQLite em memória por um adaptador de placeholders,
+testa payload de SQL injection como dado literal, filtros obrigatórios, colunas inválidas,
+somente leitura, rollback, fechamento de cursor e configuração TLS. Um mock verifica
+o formato `%s` do driver MySQL. Isso não substitui integração com MySQL real, que deve
+ser homologada em banco descartável; a UI e TLS remoto não foram exercitados aqui.
+
+Versão 2.0.0 proposta. O contrato de entrada muda deliberadamente para remover SQL livre.
